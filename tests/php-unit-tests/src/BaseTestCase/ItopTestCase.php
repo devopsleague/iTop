@@ -9,20 +9,28 @@ namespace Combodo\iTop\Test\UnitTest;
 use CMDBSource;
 use DeprecatedCallsLog;
 use MySQLTransactionNotClosedException;
-use PHPUnit\Framework\TestCase;
 use ReflectionMethod;
 use SetupUtils;
+use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use const DEBUG_BACKTRACE_IGNORE_ARGS;
 
 /**
  * Class ItopTestCase
  *
- * Helper class to extend for tests that DO NOT need to access the DataModel or the Database
+ * Helper class to extend for tests that DO NOT need to access the DataModel or the Database,
+ * but still need to access the iTop core classes and optionally boot the Symfony kernel (to access the services container).
  *
  * @since 3.0.4 3.1.1 3.2.0 N°6658 move some setUp/tearDown code to the corresponding methods *BeforeClass to speed up tests process time.
  */
-abstract class ItopTestCase extends TestCase
+abstract class ItopTestCase extends KernelTestCase
 {
+	/**
+	 * @var string Kernel to be loaded (if needed)
+	 * Defaults to the Kernel of iTop core
+	 * Alternatively, you can set this to the Kernel of your extension (e.g. "Combodo\iTop\Portal\Kernel")
+	 */
+	public const SYMFONY_KERNEL_CLASS = \Combodo\iTop\Kernel::class;
+
 	public const TEST_LOG_DIR = 'test';
 
 	/**
@@ -70,6 +78,9 @@ abstract class ItopTestCase extends TestCase
 				}
 			}
 		}
+
+		// Required to boot the portal symfony Kernel
+		$_ENV['PORTAL_ID'] = 'itop-portal';
 	}
 
 	/**
@@ -212,7 +223,7 @@ abstract class ItopTestCase extends TestCase
 	protected function LoadRequiredItopFiles(): void
 	{
 		// At least make sure that the autoloader will be loaded, and that the APPROOT constant is defined
-        require_once __DIR__.'/../../../../approot.inc.php';
+		require_once __DIR__.'/../../../../approot.inc.php';
     }
 
 	/**
@@ -522,5 +533,14 @@ abstract class ItopTestCase extends TestCase
 		var_export($aClasses);
 
 		$this->fail($sMessage);
+	}
+
+	/**
+	 * Overloaded to control which Kernel will be loaded when invoking the bootKernel method
+	 * @see static::bootKernel()
+	 */
+	final protected static function getKernelClass(): string
+	{
+		return static::SYMFONY_KERNEL_CLASS;
 	}
 }
